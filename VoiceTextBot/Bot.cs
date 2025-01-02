@@ -3,10 +3,11 @@ using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using Microsoft.Extensions.Hosting;
 
 namespace VoiceTextBot
 {
-    public class Bot
+    public class Bot : BackgroundService
     {
         private ITelegramBotClient _telegramClient;
 
@@ -15,7 +16,15 @@ namespace VoiceTextBot
             _telegramClient = telegramClient;
         }
 
-        public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        {
+            // В аргументе 3 выбираем, какие обновления хотим получать. В данном случае разрешены все
+            _telegramClient.StartReceiving(HandleUpdateAsync, HandleErrorAsync, new ReceiverOptions() { AllowedUpdates = { } }, cancellationToken: stoppingToken);
+
+            Console.WriteLine("Бот запущен");
+        }
+
+        private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
             //  Обрабатываем нажатия на кнопки из Telegram Bot API: https://core.telegram.org/bots/api#callbackquery
             if (update.Type == UpdateType.CallbackQuery)
@@ -27,12 +36,13 @@ namespace VoiceTextBot
             // Обрабатываем входящие сообщения из Telegram Bot API: https://core.telegram.org/bots/api#message
             if (update.Type == UpdateType.Message)
             {
-                await _telegramClient.SendMessage(update.Message.Chat.Id, "Вы отправили сообщение", cancellationToken: cancellationToken);
+                Console.WriteLine($"Получено сообщение {update.Message.Text}");
+                await _telegramClient.SendMessage(update.Message.Chat.Id, $"Вы отправили сообщение {update.Message.Text}", cancellationToken: cancellationToken);
                 return;
             }
         }
 
-        public Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
+        private Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
         {
             // Задаем сообщение об ошибке в зависимости от того, какая именно ошибка произошла
             var errorMessage = exception switch
