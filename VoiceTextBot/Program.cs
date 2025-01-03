@@ -3,6 +3,9 @@ using Microsoft.Extensions.Hosting;
 using System.Text;
 using Telegram.Bot;
 using VoiceTextBot;
+using VoiceTextBot.Configuration;
+using VoiceTextBot.Controllers;
+using VoiceTextBot.Services;
 
 internal class Program
 {
@@ -17,17 +20,39 @@ internal class Program
             .Build(); // Собираем
 
         Console.WriteLine("Сервис запущен");
-        
+
         // Запускаем сервис
         await host.RunAsync();
         Console.WriteLine("Сервис остановлен");
     }
 
-    static void ConfigureServices(IServiceCollection services)
+    //Контейнер зависимостей
+    private static void ConfigureServices(IServiceCollection services)
     {
+        //Инициализация кофигурации
+        AppSettings appSettings = BuildAppSettings();
+        services.AddSingleton(appSettings);
+
+        //Добавлено хранилеще сессий
+        services.AddSingleton<IStorage, MemoryStorage>();
+
+        // Подключаем контроллеры сообщений и кнопок
+        services.AddTransient<DefaultMessageController>();
+        services.AddTransient<VoiceMessageController>();
+        services.AddTransient<TextMessageController>();
+        services.AddTransient<InlineKeyboardController>();
+
         // Регистрируем объект TelegramBotClient c токеном подключения
-        services.AddSingleton<ITelegramBotClient>(provider => new TelegramBotClient("7905728373:AAEgLElFIM5aFEhHW08nkzMPR6UJmpdsZUQ"));
+        services.AddSingleton<ITelegramBotClient>(provider => new TelegramBotClient(appSettings.BotToken));
         // Регистрируем постоянно активный сервис бота
         services.AddHostedService<Bot>();
+    }
+
+    private static AppSettings BuildAppSettings()
+    {
+        return new AppSettings()
+        {
+            BotToken = "7905728373:AAEgLElFIM5aFEhHW08nkzMPR6UJmpdsZUQ"
+        };
     }
 }
