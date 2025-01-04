@@ -29,11 +29,11 @@ internal class Program
     //Контейнер зависимостей
     private static void ConfigureServices(IServiceCollection services)
     {
-        //Инициализация кофигурации
+        // Инициализация кофигурации
         AppSettings appSettings = BuildAppSettings();
         services.AddSingleton(appSettings);
 
-        //Добавлено хранилеще сессий
+        // Добавлено хранилеще сессий
         services.AddSingleton<IStorage, MemoryStorage>();
 
         // Подключаем контроллеры сообщений и кнопок
@@ -41,6 +41,9 @@ internal class Program
         services.AddTransient<VoiceMessageController>();
         services.AddTransient<TextMessageController>();
         services.AddTransient<InlineKeyboardController>();
+
+        // Подключен обработчик файлов
+        services.AddSingleton<IFileHandler, AudioFileHandler>();
 
         // Регистрируем объект TelegramBotClient c токеном подключения
         services.AddSingleton<ITelegramBotClient>(provider => new TelegramBotClient(appSettings.BotToken));
@@ -52,7 +55,12 @@ internal class Program
     {
         return new AppSettings()
         {
-            BotToken = "7905728373:AAEgLElFIM5aFEhHW08nkzMPR6UJmpdsZUQ"
+            DownloadsFolder = @"C:\Users\aveA\Downloads",
+            BotToken = "7905728373:AAEgLElFIM5aFEhHW08nkzMPR6UJmpdsZUQ",
+            AudioFileName = "audio",
+            InputAudioFormat = "ogg",
+            OutputAudioFormat = "wav",
+            InputAudioBitrate = 48000,
         };
     }
 }
