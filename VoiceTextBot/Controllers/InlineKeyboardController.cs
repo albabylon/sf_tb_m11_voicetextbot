@@ -30,6 +30,7 @@ namespace VoiceTextBot.Controllers
             {
                 "ru" => " Русский",
                 "en" => " Английский",
+                "fr" => " Французкий",
                 _ => String.Empty
             };
 
