@@ -4,6 +4,7 @@ using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using UtilityBot.Controllers;
 
 namespace UtilityBot
 {
@@ -11,14 +12,21 @@ namespace UtilityBot
     {
         private ITelegramBotClient _telegramClient;
 
-        public Bot(ITelegramBotClient telegramClient)
+        private InlineKeyboardController _inlineKeyboardController;
+        private TextMessageController _textMessageController;
+        private DefaultMessageController _defaultMessageController;
+
+        public Bot(ITelegramBotClient telegramClient, InlineKeyboardController inlineKeyboardController, TextMessageController textMessageController, DefaultMessageController defaultMessageController)
         {
             _telegramClient = telegramClient;
+
+            _inlineKeyboardController = inlineKeyboardController;
+            _textMessageController = textMessageController;
+            _defaultMessageController = defaultMessageController;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            // В аргументе 3 выбираем, какие обновления хотим получать. В данном случае разрешены все
             _telegramClient.StartReceiving(HandleUpdateAsync, HandleErrorAsync, new ReceiverOptions() { AllowedUpdates = { } }, cancellationToken: stoppingToken);
 
             Console.WriteLine("Бот запущен");
@@ -26,10 +34,9 @@ namespace UtilityBot
 
         private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
-            //Нажатие на кнопки
             if (update.Type == UpdateType.CallbackQuery)
             {
-                await _telegramClient.SendMessage(update.CallbackQuery.From.Id, $"Сообщение не обработано. Введите, пожалуйста, текст.", cancellationToken: cancellationToken);
+                await _inlineKeyboardController.Handle(update.CallbackQuery, cancellationToken);
                 return;
             }
 
@@ -38,10 +45,10 @@ namespace UtilityBot
                 switch (update.Message!.Type)
                 {
                     case MessageType.Text:
-                        await _telegramClient.SendMessage(update.Message.From.Id, $"Длина сообщения: {update.Message.Text.Length} знаков", cancellationToken: cancellationToken);
+                        await _textMessageController.Handle(update.Message, cancellationToken);
                         return;
                     default:
-                        await _telegramClient.SendMessage(update.Message.From.Id, $"Сообщение не обработано. Введите, пожалуйста, текст.", cancellationToken: cancellationToken);
+                        await _defaultMessageController.Handle(update.Message, cancellationToken);
                         return;
                 }
             }
@@ -49,17 +56,14 @@ namespace UtilityBot
 
         private Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
         {
-            // Задаем сообщение об ошибке в зависимости от того, какая именно ошибка произошла
             var errorMessage = exception switch
             {
                 ApiRequestException apiRequestException => $"Telegram API Error:\n[{apiRequestException.ErrorCode}]\n{apiRequestException.Message}",
                 _ => exception.ToString()
             };
 
-            // Выводим в консоль информацию об ошибке
             Console.WriteLine(errorMessage);
 
-            // Задержка перед повторным подключением
             Console.WriteLine("Ожидаем 10 секунд перед повторным подключением.");
             Thread.Sleep(10000);
 
